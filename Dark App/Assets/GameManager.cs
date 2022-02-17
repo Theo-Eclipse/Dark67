@@ -11,62 +11,84 @@ public class GameManager : MonoBehaviour
 
     [Header("Scripts & Controll")]
     [SerializeField] private GameUI gameUi;
-    [SerializeField] private SymbolLoader SymbolsLoader;
-    [SerializeField] private TextMeshProUGUI GameTimer;
+    [SerializeField] private SymbolTable symbolTable;
 
     private float timer = 0;
     private float lerp = 0;
+    private int GamesPlayed = 0;
+    private int GamesLeftToSecret = 67;
 
     private void Start()
     {
+        LoadGameStats();
         ShowStart();
     }
     private void Update()
     {
         if (timer > 0) 
         {
-            GameTimer.text = string.Format("{0}",(int)(timer - Time.time));
-            lerp = Mathf.Lerp(1.5f, 1.0f, (timer - Time.time) % 1.0f);
-            GameTimer.transform.localScale = lerp * Vector3.one;
-            GameTimer.color = new Color(1, 1, 1, (timer - Time.time) % 1.0f);
-
+            UpdateTimer();
             if (timer <= Time.time) 
             {
-                timer = 0;
-                GameTimer.text = GameTimerDelayLength.ToString();
-                GameTimer.transform.localScale = Vector3.one;
-                GameTimer.color = new Color(1, 1, 1, 1.0f);
+                ResetTimer();
                 ShowResults();
             }
         }
     }
-    //How to + Start => Ready. => Wait 5 Seconds. => Show + Retry
-
     public void ShowStart() 
     {
-        gameUi.ShowStart();
-        SymbolsLoader.SetDefaultView();
-        gameUi.SetTexts(0, 67);
+        gameUi.ShowStartScreen();
+        gameUi.SetGameTimer(GameTimerDelayLength);
+        symbolTable.SetDefaultView();
+        gameUi.SetTexts(GamesPlayed, GamesLeftToSecret);
     }
-
     public void ShowReady() 
     {
-        gameUi.ShowReady();
+        gameUi.ShowReadyScreen();
     }
 
     public void StartGame()
     {
-        SymbolsLoader.LoadSymbolsAndNumbers();
+        symbolTable.LoadSymbolsAndNumbers();
         timer = Time.time + GameTimerDelayLength;      
-        gameUi.StartGame();
+        gameUi.StartGameScreen();
     }
 
     public void ShowResults()
     {
-        gameUi.SetResultSymbol(SymbolsLoader.GetResult());
-        gameUi.ShowResults();
-        gameUi.SetTexts(0, 67);
+        GamesPlayed++;
+        GamesLeftToSecret = GamesLeftToSecret - 1 >= 0 ? GamesLeftToSecret - 1 : 67;// If games amount left is below zero, start again form 67.
+        gameUi.SetResultSymbol(symbolTable.GetResult());
+        gameUi.ShowResultsScreen();
+        gameUi.SetTexts(GamesPlayed, GamesLeftToSecret);
+        SaveGameStats();
     }
 
+    private void UpdateTimer() 
+    {
+        gameUi.Timer.text = string.Format("{0}", (int)(timer - Time.time));
+        lerp = Mathf.Lerp(1.5f, 1.0f, (timer - Time.time) % 1.0f);//Lerp for Fade out effect
+        gameUi.Timer.transform.localScale = lerp * Vector3.one;// Fade out effect
+        gameUi.Timer.color = new Color(1, 1, 1, (timer - Time.time) % 1.0f);// Fade out effect
+    }
 
+    private void ResetTimer() 
+    {
+        timer = 0;
+        gameUi.Timer.text = GameTimerDelayLength.ToString();
+        gameUi.Timer.transform.localScale = Vector3.one;
+        gameUi.Timer.color = new Color(1, 1, 1, 1.0f);
+    }
+
+    private void SaveGameStats() 
+    {
+        PlayerPrefs.SetInt("GAMES_PLAYED", GamesPlayed);
+        PlayerPrefs.SetInt("GAMES_LEFT", GamesLeftToSecret);
+    }
+
+    private void LoadGameStats()
+    {
+        GamesPlayed = PlayerPrefs.GetInt("GAMES_PLAYED", 0);
+        GamesLeftToSecret = PlayerPrefs.GetInt("GAMES_LEFT", 67);
+    }
 }
